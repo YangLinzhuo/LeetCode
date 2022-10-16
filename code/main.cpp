@@ -1,76 +1,54 @@
 #include <vector>
 #include <unordered_set>
 #include <algorithm>
-#include <unordered_set>
+#include <unordered_map>
 #include <iostream>
+#include <list>
 
 using namespace std;
 
 // @lc code=start
-class Solution {
+class LRUCache {
 public:
-    string cur_str;
-    int cur_score{0};
-    int max_score{0};
-    int max_len{0};
-    unordered_set<string> tmp_ans;
+    LRUCache(int capacity) : m_capacity(capacity) {
 
-    void add_para(string &s, int idx, bool is_left) {
-        int val = is_left ? 1 : -1;
-        cur_str.push_back(s[idx]);
-        cur_score += val;
-        dfs(s, idx + 1);
-        cur_score -= val;
-        cur_str.pop_back();
     }
-
-    void dfs(string &s, int idx) {
-        if (cur_score < 0 || cur_score > max_score) {
-            return;
+    
+    int get(int key) {
+        auto iter = m_keyToIterator.find(key);
+        if (iter != m_keyToIterator.end()) {
+            auto list_iter = iter->second;
+            int val = *list_iter;
+            m_cache.erase(list_iter);
+            m_cache.push_front(val);
+            m_keyToIterator[key] = m_cache.begin();
+            return val;
         }
-        if (idx >= s.size()) {
-            if (cur_score == 0 && cur_str.size() >= max_len) {
-                tmp_ans.emplace(cur_str);
-                max_len = cur_str.size();
+        return -1;
+    }
+    
+    void put(int key, int value) {
+        auto iter = m_keyToIterator.find(key);
+        if (iter == m_keyToIterator.end()) {
+            if (m_cache.size() == m_capacity) {
+                int val_to_remove = m_cache.back();
+                m_cache.pop_back();
+                m_keyToIterator.erase(val_to_remove);
             }
-            return;
-        }
-        char c = s[idx];
-        if (c == '(') {
-            // add
-            add_para(s, idx, true);
-            // not add
-            dfs(s, idx + 1);
-        } else if (c == ')') {
-            // add
-            add_para(s, idx, false);
-            // not add
-            dfs(s, idx + 1);
+            m_cache.push_front(value);
+            m_keyToIterator.emplace(key, m_cache.begin());
         } else {
-            // must be added
-            cur_str.push_back(c);
-            dfs(s, idx + 1);
-            cur_str.pop_back();
+            auto list_iter = iter->second;
+            m_cache.erase(list_iter);
+            m_cache.push_front(value);
+            m_keyToIterator[key] = m_cache.begin();
         }
     }
 
-    vector<string> removeInvalidParentheses(string s) {
-        vector<string> ans;
-        int left_score = 0, right_score = 0;
-        for (auto c : s) {  // calculate the max score on theory
-            if (c == '(') { left_score++; }
-            else if (c == ')') { right_score++; }
-        }
-        max_score = min(left_score, right_score);
-        dfs(s, 0);
-
-        for (auto &str : tmp_ans) {
-            if (str.size() == max_len) {
-                ans.emplace_back(str);
-            }
-        }
-        return ans;
-    }
+private:
+    size_t m_capacity;
+    list<int> m_cache;  // save value
+    unordered_map<int, list<int>::iterator> m_keyToIterator;  // save key
 };
 
 int main() {
@@ -78,17 +56,23 @@ int main() {
     vector<int> candidates = {10,1,2,7,6,1,5};
     int target = 8;
     string s = ")(f";
-    Solution solution;
+    vector<string> commands{"put","put","get","put","get","put","get","get","get"};
+    vector<vector<int>> values = {{1,0},{2,2},{1},{3,3},{2},{4,4},{1},{3},{4}};
+    LRUCache cache(2);
+    for (int i = 0; i < commands.size(); ++i) {
+        if (commands[i] == "put") {
+            cache.put(values[i][0], values[i][1]);
+        } else {
+            cache.get(values[i][0]);
+        }
+    }
     // solution.solveSudoku(board);
     // for (int i = 0; i < BOARD_SIZE; ++i) {
     //     for (int j = 0; j < BOARD_SIZE; ++j) {
-    //         cout << board[i][j] << " ";
+    //         cout << board{i}{j} << " ";
     //     }
     //     cout << endl;
     // }
-    auto ans = solution.removeInvalidParentheses(s);
-    for (auto &str : ans) {
-        cout << str << " ";
-    }
+    
     return 0;
 }
